@@ -5,11 +5,10 @@ import ServiceCard from './components/ServiceCard';
 import SubscriptionModal from './components/SubscriptionModal';
 import AdModal from './components/AdModal';
 import { generateText } from './services/geminiService';
-import { Zap, LockKeyhole, Settings, Sun, Moon, X, AlertTriangle } from 'lucide-react';
+import { Zap, LockKeyhole, Settings, Sun, Moon, X, Megaphone } from 'lucide-react';
 import SettingsModal from './components/SettingsModal';
 import CustomAdCard from './components/CustomAdCard';
 import ContactModal from './components/ContactModal';
-import Spinner from './components/Spinner';
 
 // Default configuration, used if nothing is in localStorage
 const DEFAULT_CONFIG: AppConfig = {
@@ -193,51 +192,6 @@ const Login: React.FC<{ onLoginSuccess: () => void; onCancel: () => void; config
   );
 };
 
-
-// ==========================================
-// API KEY SELECTION COMPONENT
-// ==========================================
-const ApiKeySelection: React.FC<{ onKeySelected: () => void }> = ({ onKeySelected }) => {
-    const handleSelectKey = async () => {
-        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-            await window.aistudio.openSelectKey();
-            // Assume success after triggering the dialog to avoid race conditions.
-            onKeySelected();
-        } else {
-            alert("آلية تحديد المفتاح غير متوفرة.");
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-slate-100 dark:bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center z-50 p-4">
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-black/10 dark:border-white/10 w-full max-w-md mx-auto text-center">
-                <div className="flex flex-col items-center mb-6">
-                    <div className="p-3 bg-yellow-500/20 rounded-full mb-3">
-                        <AlertTriangle className="w-8 h-8 text-yellow-400 dark:text-yellow-300" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">مطلوب مفتاح API</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">
-                        لاستخدام هذا التطبيق، يجب عليك أولاً تحديد مفتاح واجهة برمجية (API Key) من Google AI Studio.
-                    </p>
-                </div>
-                <button
-                    onClick={handleSelectKey}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                    اختيار مفتاح API
-                </button>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                    سيتم استخدام هذا المفتاح لإجراء طلبات إلى Gemini API. قد يتم تطبيق رسوم. 
-                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-400">
-                         اعرف المزيد عن الفوترة
-                    </a>.
-                </p>
-            </div>
-        </div>
-    );
-};
-
-
 // ==========================================
 // HEADER & THEME TOGGLE
 // ==========================================
@@ -269,7 +223,13 @@ const ThemeToggle: React.FC = () => {
     );
   };
 
-const Header: React.FC<{ onSettingsClick: () => void; onLogoClick: () => void; isAuthenticated: boolean; }> = ({ onSettingsClick, onLogoClick, isAuthenticated }) => (
+const Header: React.FC<{ 
+  onSettingsClick: () => void; 
+  onLogoClick: () => void; 
+  isAuthenticated: boolean; 
+  hasAds: boolean;
+  onAdsClick: () => void;
+}> = ({ onSettingsClick, onLogoClick, isAuthenticated, hasAds, onAdsClick }) => (
     <header className="text-center py-8 md:py-12 relative">
     <ThemeToggle />
     <div onClick={onLogoClick} className="inline-flex items-center gap-4 cursor-pointer select-none">
@@ -281,15 +241,27 @@ const Header: React.FC<{ onSettingsClick: () => void; onLogoClick: () => void; i
     <p className="text-gray-600 dark:text-gray-300 mt-4 text-lg">
       خدمات نصية إبداعية بين يديك، مدعومة بالذكاء الاصطناعي
     </p>
-    {isAuthenticated && (
-      <button 
-        onClick={onSettingsClick} 
-        className="absolute top-4 right-4 p-3 bg-black/10 dark:bg-white/10 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
-        aria-label="الإعدادات"
-      >
-        <Settings className="w-6 h-6 text-slate-800 dark:text-white" />
-      </button>
-    )}
+    <div className="absolute top-4 right-4 flex items-center gap-2">
+        {hasAds && (
+            <button
+                onClick={onAdsClick}
+                className="p-3 bg-black/10 dark:bg-white/10 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+                aria-label="عرض الإعلانات"
+                title="عرض الإعلانات المتاحة"
+            >
+                <Megaphone className="w-6 h-6 text-slate-800 dark:text-white" />
+            </button>
+        )}
+        {isAuthenticated && (
+          <button 
+            onClick={onSettingsClick} 
+            className="p-3 bg-black/10 dark:bg-white/10 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+            aria-label="الإعدادات"
+          >
+            <Settings className="w-6 h-6 text-slate-800 dark:text-white" />
+          </button>
+        )}
+    </div>
   </header>
 );
 
@@ -314,24 +286,8 @@ const App: React.FC = () => {
   const [showLogin, setShowLogin] = useState<boolean>(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const clickTimeoutRef = useRef<number | null>(null);
+  const adsSectionRef = useRef<HTMLElement>(null);
   
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null: checking, false: no key, true: key selected
-
-  // Effect to check for API key on startup
-  useEffect(() => {
-    const checkApiKey = async () => {
-      // The `aistudio` object is injected by the hosting environment.
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        const userHasKey = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(userHasKey);
-      } else {
-        console.warn("aistudio API key selection mechanism not found. Assuming key is present.");
-        setHasApiKey(true); // Fallback for environments where aistudio is not available
-      }
-    };
-    checkApiKey();
-  }, []);
-
   // Effect to handle config changes
   useEffect(() => {
     localStorage.setItem('appConfig', JSON.stringify(appConfig));
@@ -354,6 +310,10 @@ const App: React.FC = () => {
   const handleLoginSuccess = () => {
       setIsAuthenticated(true);
       setShowLogin(false);
+  };
+  
+  const handleAdsIconClick = () => {
+    adsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleLogoClick = useCallback(() => {
@@ -387,19 +347,18 @@ const App: React.FC = () => {
       const resultText = await generateText(fullPrompt);
       setAppData(prev => ({...prev, results: { ...prev.results, [service]: resultText }}));
       playNotificationSound();
+      setGenerationRequest(null); // Clear request only on SUCCESS
     } catch (error) {
       console.error("Failed to fetch AI result:", error);
-      let errorMessage = 'حدث خطأ ما. يرجى المحاولة مرة أخرى.';
-       if (error instanceof Error && error.message.includes('Requested entity was not found')) {
-        errorMessage = "فشل التحقق من مفتاح API. يرجى تحديد مفتاح صالح مرة أخرى.";
-        setHasApiKey(false); // Reset and force user to select a key again.
+      let errorMessage = 'عذراً، حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.';
+      if (error instanceof Error && (error.message.includes('API Key') || error.message.includes('entity was not found'))) {
+          errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً بسبب مشكلة في الإعدادات. يرجى المحاولة مرة أخرى في وقت لاحق.';
       } else if (error instanceof Error) {
-        errorMessage = `عذراً، حدث خطأ: ${error.message}`;
+          errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
       }
       setAppData(prev => ({...prev, results: { ...prev.results, [service]: errorMessage }}));
     } finally {
       setGeneratingService(null);
-      setGenerationRequest(null);
     }
   }, [generationRequest]);
 
@@ -458,19 +417,6 @@ const App: React.FC = () => {
     setActiveService(prev => (prev === serviceType ? null : serviceType));
   };
   
-  // Render states based on API key status
-  if (hasApiKey === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-gradient-to-br from-gray-900 via-slate-900 to-black">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (!hasApiKey) {
-    return <ApiKeySelection onKeySelected={() => setHasApiKey(true)} />;
-  }
-
   if (showLogin && appConfig.login.enabled) {
     return <Login onLoginSuccess={handleLoginSuccess} onCancel={() => setShowLogin(false)} config={appConfig.login} />;
   }
@@ -482,10 +428,12 @@ const App: React.FC = () => {
           onSettingsClick={() => setIsSettingsOpen(true)} 
           onLogoClick={handleLogoClick}
           isAuthenticated={isAuthenticated}
+          hasAds={appData.customAds.length > 0}
+          onAdsClick={handleAdsIconClick}
         />
 
         {appData.customAds.length > 0 && (
-          <section className="mb-8 lg:mb-12">
+          <section ref={adsSectionRef} className="mb-8 lg:mb-12">
             <h2 className="text-2xl font-bold text-center mb-6 text-slate-800 dark:text-white">إعلانات خاصة</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {appData.customAds.map(ad => (
