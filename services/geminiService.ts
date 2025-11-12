@@ -1,11 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const generateText = async (prompt: string): Promise<string> => {
-  // The explicit check for process.env.API_KEY is removed.
-  // The Gemini SDK's constructor will handle missing or invalid keys,
-  // and the catch block will propagate the error to the UI for user-friendly display.
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Check for GEMINI_API_KEY first, then fall back to API_KEY to support different environments.
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+
+    if (!apiKey) {
+      // Throw a specific, clear error if neither key is configured.
+      // The UI will catch this and display a user-friendly message.
+      throw new Error("AI API Key not found. Please configure GEMINI_API_KEY or API_KEY.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

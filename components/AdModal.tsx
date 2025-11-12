@@ -39,6 +39,26 @@ const loadYouTubeAPI = () => {
     return youtubeApiPromise;
 };
 
+const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    let videoId = null;
+    // Regular expression to cover various YouTube URL formats
+    const patterns = [
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=|embed\/|v\/|)([\w-]{11})(?:\S+)?/,
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            videoId = match[1];
+            break;
+        }
+    }
+
+    return videoId;
+};
+
+
 const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration }) => {
   const [countdown, setCountdown] = useState(duration);
   const playerRef = useRef<any>(null);
@@ -82,9 +102,7 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
       // If modal closed while API was loading, do nothing.
       if (!document.getElementById(PLAYER_ID)) return;
       
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = adUrl.match(regExp);
-      const videoId = (match && match[2].length === 11) ? match[2] : null;
+      const videoId = getYouTubeVideoId(adUrl);
 
       if (!videoId) {
         console.error('Could not parse video ID from URL:', adUrl);
