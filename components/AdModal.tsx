@@ -42,16 +42,33 @@ const loadYouTubeAPI = () => {
 const getYouTubeVideoId = (url: string): string | null => {
     if (!url) return null;
     let videoId = null;
-    // Regular expression to cover various YouTube URL formats
-    const patterns = [
-        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=|embed\/|v\/|)([\w-]{11})(?:\S+)?/,
-    ];
 
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) {
-            videoId = match[1];
-            break;
+    try {
+        // More robust parsing for standard URLs
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+
+        if (hostname.includes('youtube.com')) {
+            videoId = urlObj.searchParams.get('v');
+        } else if (hostname.includes('youtu.be')) {
+            videoId = urlObj.pathname.slice(1);
+        }
+    } catch (e) {
+        // Fallback for non-standard formats or malformed URLs
+    }
+    
+    // If standard parsing fails, try regex patterns as a fallback
+    if (!videoId) {
+        const patterns = [
+            /(?:v=|\/v\/|youtu\.be\/|embed\/|\/)([\w-]{11})/,
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match && match[1]) {
+                videoId = match[1];
+                break;
+            }
         }
     }
 

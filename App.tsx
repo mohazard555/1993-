@@ -280,6 +280,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [activeService, setActiveService] = useState<ServiceType | null>(ServiceType.GENERAL);
+  const [showSaveNotification, setShowSaveNotification] = useState<boolean>(false);
   
   const [generatingService, setGeneratingService] = useState<ServiceType | null>(null);
   const [generationRequest, setGenerationRequest] = useState<{ service: ServiceType; prompt: string } | null>(null);
@@ -373,17 +374,17 @@ const App: React.FC = () => {
       window.open(appConfig.adSettings.postAdUrl, '_blank');
     }
     fetchAiResult();
-  }, [fetchAiResult, appConfig.adSettings.postAdUrl]);
+  }, [fetchAiResult, appConfig]);
 
   const startAdFlow = useCallback(() => {
-    if(appConfig.adSettings.videoUrls.length === 0) {
+    if(appConfig.adSettings.videoUrls.length === 0 || appConfig.adSettings.videoUrls[0] === '') {
         handleAdFinished();
         return;
     }
     const randomAdUrl = appConfig.adSettings.videoUrls[Math.floor(Math.random() * appConfig.adSettings.videoUrls.length)];
     setCurrentAdUrl(randomAdUrl);
     setShowAdModal(true);
-  }, [appConfig.adSettings.videoUrls, handleAdFinished]);
+  }, [appConfig, handleAdFinished]);
 
   const handleGenerate = useCallback((serviceType: ServiceType, prompt: string) => {
     setGeneratingService(serviceType);
@@ -401,7 +402,7 @@ const App: React.FC = () => {
       setAppData(prev => ({...prev, results: {...prev.results, [serviceType]: null}}));
   };
 
-  const handleSaveResult = (serviceType: ServiceType, prompt: string, result: string) => {
+  const handleSaveResult = useCallback((serviceType: ServiceType, prompt: string, result: string) => {
       const newSavedResult = {
           id: crypto.randomUUID(),
           serviceType,
@@ -410,8 +411,9 @@ const App: React.FC = () => {
           timestamp: new Date().toISOString(),
       };
       setAppData(prev => ({...prev, savedResults: [newSavedResult, ...prev.savedResults]}));
-      // Optionally show a notification
-  };
+      setShowSaveNotification(true);
+      setTimeout(() => setShowSaveNotification(false), 2500);
+  }, []);
 
 
   const handleSubscribed = useCallback(() => {
@@ -504,6 +506,11 @@ const App: React.FC = () => {
         contactInfo={appConfig.developerInfo.contact}
         developerName={appConfig.developerInfo.name}
       />
+      {showSaveNotification && (
+          <div className="fixed bottom-5 right-5 bg-green-600 text-white py-3 px-5 rounded-xl shadow-lg z-[100] animate-pulse">
+              👍 تم حفظ النتيجة بنجاح!
+          </div>
+      )}
     </div>
   );
 };
