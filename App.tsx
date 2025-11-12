@@ -25,6 +25,7 @@ const DEFAULT_CONFIG: AppConfig = {
       'https://www.youtube.com/embed/xvFZjo5PgG0?autoplay=1&mute=1',
     ],
     duration: 25,
+    postAdUrl: '',
   },
   developerInfo: {
     name: 'Ahmad',
@@ -351,10 +352,14 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Failed to fetch AI result:", error);
       let errorMessage = 'عذراً، حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.';
-      if (error instanceof Error && (error.message.includes('API Key') || error.message.includes('entity was not found'))) {
-          errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً بسبب مشكلة في الإعدادات. يرجى المحاولة مرة أخرى في وقت لاحق.';
-      } else if (error instanceof Error) {
-          errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
+      if (error instanceof Error) {
+        if (error.message.includes('API_KEY is not configured')) {
+            errorMessage = 'خطأ في الإعدادات: مفتاح API للذكاء الاصطناعي غير موجود. يرجى مراجعة المسؤول.';
+        } else if (error.message.includes('API Key') || error.message.includes('entity was not found')) {
+            errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً بسبب مشكلة في الإعدادات. قد يكون مفتاح API غير صالح أو أن الخدمة محظورة.';
+        } else {
+            errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
+        }
       }
       setAppData(prev => ({...prev, results: { ...prev.results, [service]: errorMessage }}));
     } finally {
@@ -410,8 +415,11 @@ const App: React.FC = () => {
 
   const handleAdFinished = useCallback(() => {
     setShowAdModal(false);
+    if (appConfig.adSettings.postAdUrl) {
+      window.open(appConfig.adSettings.postAdUrl, '_blank');
+    }
     fetchAiResult();
-  }, [fetchAiResult]);
+  }, [fetchAiResult, appConfig.adSettings.postAdUrl]);
   
   const handleToggleService = (serviceType: ServiceType) => {
     setActiveService(prev => (prev === serviceType ? null : serviceType));

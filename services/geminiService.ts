@@ -1,6 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const generateText = async (prompt: string): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error('API_KEY is not configured in the environment.');
+  }
   try {
     // Create a new GoogleGenAI instance right before making an API call.
     // This ensures it always uses the most up-to-date API key selected

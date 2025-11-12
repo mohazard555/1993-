@@ -47,6 +47,7 @@ export interface AppConfig {
   adSettings: {
     videoUrls: string[];
     duration: number; // in seconds
+    postAdUrl?: string;
   };
   developerInfo: {
     name: string;

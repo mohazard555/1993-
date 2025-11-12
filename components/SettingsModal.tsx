@@ -113,6 +113,7 @@ const AppConfigTab: React.FC<{ config: AppConfig, setConfig: (c: AppConfig) => v
                 <legend className="px-2 font-bold text-lg text-slate-800 dark:text-white">إعدادات الإعلانات</legend>
                 <div className="space-y-4">
                     <FormField name="adSettings.duration" label="مدة الإعلان (بالثواني)" type="number" value={localConfig.adSettings.duration} />
+                    <FormField name="adSettings.postAdUrl" label="رابط التوجيه بعد الإعلان (اختياري)" value={localConfig.adSettings.postAdUrl || ''} />
                     <FormField name="adSettings.videoUrls" label="روابط فيديوهات الإعلانات (رابط واحد في كل سطر)" component="textarea" rows={4} value={localConfig.adSettings.videoUrls.join('\n')} />
                 </div>
             </fieldset>

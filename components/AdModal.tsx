@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 
 interface AdModalProps {
   isOpen: boolean;
@@ -41,83 +41,94 @@ const loadYouTubeAPI = () => {
 
 const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration }) => {
   const [countdown, setCountdown] = useState(duration);
-  const playerRef = useRef<any>(null); // YT.Player is not easily typed without @types/youtube
+  const playerRef = useRef<any>(null);
   const intervalRef = useRef<number | null>(null);
   const PLAYER_ID = 'youtube-ad-player';
 
-  const stopCountdown = () => {
+  const stopCountdown = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  }, []);
 
-  const startCountdown = () => {
+  const startCountdown = useCallback(() => {
     stopCountdown(); // Prevent multiple intervals
     intervalRef.current = window.setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           stopCountdown();
-          onAdFinished(); // This will trigger the modal to close
+          onAdFinished();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  };
+  }, [stopCountdown, onAdFinished]);
 
   useEffect(() => {
-    if (isOpen) {
-      setCountdown(duration);
-      
-      loadYouTubeAPI().then(() => {
-        // Ensure this runs only when the modal is open and the player doesn't exist yet
-        if (isOpen && !playerRef.current) {
-          const videoIdMatch = adUrl.match(/embed\/([^?]+)/);
-          const videoId = videoIdMatch ? videoIdMatch[1] : null;
-
-          if (!videoId) {
-            console.error('Could not parse video ID from URL:', adUrl);
-            // Fallback to old timer behavior if ID parsing fails
-            const fallbackTimer = setTimeout(() => onAdFinished(), duration * 1000);
-            return () => clearTimeout(fallbackTimer);
-          }
-
-          playerRef.current = new window.YT.Player(PLAYER_ID, {
-            videoId: videoId,
-            playerVars: {
-              autoplay: 1,
-              mute: 1,
-              controls: 0,
-              rel: 0,
-              playsinline: 1,
-            },
-            events: {
-              onStateChange: (event: any) => {
-                // When video starts playing, start the countdown
-                if (event.data === window.YT.PlayerState.PLAYING) {
-                  startCountdown();
-                } else {
-                  // If video is paused, ended, or buffering, stop the countdown
-                  stopCountdown();
-                }
-              },
-            },
-          });
-        }
-      });
+    if (!isOpen) {
+      return;
     }
 
-    // Cleanup function for when component unmounts or isOpen becomes false
-    return () => {
-      stopCountdown();
+    setCountdown(duration);
+
+    // Safety net in case YouTube API fails or video doesn't play
+    const safetyTimeout = setTimeout(() => {
+      onAdFinished();
+    }, (duration + 5) * 1000);
+
+    loadYouTubeAPI().then(() => {
+      // If modal closed while API was loading, do nothing.
+      if (!document.getElementById(PLAYER_ID)) return;
+      
+      const videoIdMatch = adUrl.match(/embed\/([^?]+)/);
+      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+
+      if (!videoId) {
+        console.error('Could not parse video ID from URL:', adUrl);
+        startCountdown(); // Fallback to timer if ID parsing fails
+        return;
+      }
+      
       if (playerRef.current && typeof playerRef.current.destroy === 'function') {
         playerRef.current.destroy();
       }
-      playerRef.current = null;
+
+      playerRef.current = new window.YT.Player(PLAYER_ID, {
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          controls: 0,
+          rel: 0,
+          playsinline: 1,
+        },
+        events: {
+          onReady: (event: any) => {
+            // Autoplay might be blocked, explicitly play.
+            event.target.playVideo();
+          },
+          onStateChange: (event: any) => {
+            // When video starts playing, start the countdown, but only once.
+            if (event.data === window.YT.PlayerState.PLAYING && !intervalRef.current) {
+              startCountdown();
+            }
+          },
+        },
+      });
+    });
+
+    // Cleanup function
+    return () => {
+      clearTimeout(safetyTimeout);
+      stopCountdown();
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, adUrl, duration, onAdFinished, startCountdown, stopCountdown]);
 
   if (!isOpen) return null;
 
