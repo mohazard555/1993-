@@ -371,7 +371,18 @@ const App: React.FC = () => {
   const handleAdFinished = useCallback(() => {
     setShowAdModal(false);
     if (appConfig.adSettings.postAdUrl) {
-      window.open(appConfig.adSettings.postAdUrl, '_blank');
+        let url = appConfig.adSettings.postAdUrl;
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+        try {
+            const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+            if (!newWindow) {
+                console.warn('Popup blocked or failed to open.');
+            }
+        } catch (e) {
+            console.error("Error opening post-ad URL:", e);
+        }
     }
     fetchAiResult();
   }, [fetchAiResult, appConfig]);
@@ -403,6 +414,23 @@ const App: React.FC = () => {
   };
 
   const handleSaveResult = useCallback((serviceType: ServiceType, prompt: string, result: string) => {
+      try {
+        const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const serviceTitle = SERVICE_CONFIGS[serviceType].title.replace(/[\s\/]/g, '_');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `نتيجة_${serviceTitle}_${date}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+          console.error("File download failed:", error);
+          alert("فشل تحميل الملف.");
+      }
+
       const newSavedResult = {
           id: crypto.randomUUID(),
           serviceType,

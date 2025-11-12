@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clipboard, Check, Save, Share2, Trash2, Volume2, VolumeX } from 'lucide-react';
 import TextAnalysis from './TextAnalysis';
 
@@ -15,58 +15,36 @@ const WhatsAppIcon: React.FC = () => (
 );
 const FacebookIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-blue-600">
-        <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z"/>
+        <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89H8.078v-2.89h2.359v-2.193c0-2.325 1.423-3.596 3.5-3.596 1.002 0 1.863.074 2.113.107v2.583h-1.528c-1.13 0-1.35.536-1.35 1.322v1.734h2.867l-.372 2.89h-2.495V21.878A10.003 10.003 0 0022 12z"/>
     </svg>
 );
 const TelegramIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-sky-500">
-        <path d="M24 12c0-6.627-5.373-12-12-12s-12 5.373-12 12 5.373 12 12 12 12-5.373 12-12zm-18.435-5.346l14.869 5.437c.43.161.43.772-.001.932l-3.926.963-1.64 5.345c-.114.37-.583.483-.84.195l-2.486-2.288-2.618 2.52c-.347.346-.943.041-.943-.444v-5.238l9.53-6.103c.27-.173-.03-.591-.351-.43l-11.21 4.537-3.465-1.077c-.44-.136-.44-.796 0-.932z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.153 8.332l-2.072 9.73c-.228 1.074-1.01 1.34-1.91  .833l-4.228-3.13-2.035 1.95c-.22.22-.407.407-.832.407l.228-4.32 7.76-7.008c.325-.286-.098-.445-.523-.16L6.52 13.368l-4.13-1.28c-1.055-.325-1.055-1.01.21-1.517l13.064-5.02c.87-.333 1.592.193 1.33 1.21z"/>
     </svg>
 );
 
-
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) => {
-  const [isCopied, setIsCopied] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  const [showShareOptions, setShowShareOptions] = useState(false);
-  const shareContainerRef = useRef<HTMLDivElement>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-
-  useEffect(() => {
-    if (text) {
-      setShowNotification(true);
-      const timer = setTimeout(() => setShowNotification(false), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [text]);
-
-  useEffect(() => {
-    // Cleanup function to stop speech synthesis when component unmounts
-    return () => {
-      if (speechSynthesis.speaking) {
-        speechSynthesis.cancel();
-      }
-    };
-  }, []);
-  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (shareContainerRef.current && !shareContainerRef.current.contains(event.target as Node)) {
-            setShowShareOptions(false);
-        }
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setShowShareMenu(false);
+      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [shareContainerRef]);
-
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = async () => {
@@ -77,120 +55,110 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
           text: text,
         });
       } catch (error) {
-        console.error('خطأ في مشاركة النص:', error);
+        console.error('Error sharing:', error);
       }
     } else {
-      setShowShareOptions(prev => !prev);
+      setShowShareMenu(true);
     }
   };
 
-  const handleSpeak = () => {
+  const speakText = useCallback((textToSpeak: string) => {
+      const voices = window.speechSynthesis.getVoices();
+      const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
+  
+      const utterance = utteranceRef.current || new SpeechSynthesisUtterance(textToSpeak);
+      if (!utteranceRef.current) {
+          utteranceRef.current = utterance;
+      }
+      
+      utterance.text = textToSpeak;
+      utterance.lang = 'ar-SA';
+  
+      if (arabicVoice) {
+        utterance.voice = arabicVoice;
+      } else {
+        console.warn('No Arabic voice found. Using browser default for ar-SA.');
+      }
+  
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+  
+      utterance.onerror = (event) => {
+        console.error('SpeechSynthesisUtterance.onerror', event);
+        alert('عذراً، حدث خطأ أثناء محاولة قراءة النص. قد لا يكون هناك صوت عربي متاح على جهازك أو أن هناك مشكلة في محرك الصوت.');
+        setIsSpeaking(false);
+      };
+      
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+  }, []);
+
+  const handleSpeak = useCallback(() => {
+    if (!text) return;
+
     if (isSpeaking) {
-      speechSynthesis.cancel();
+      window.speechSynthesis.cancel();
       setIsSpeaking(false);
       return;
     }
 
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-SA'; // Explicitly set language for better voice selection
-
-      const setVoiceAndSpeak = () => {
-        const voices = speechSynthesis.getVoices();
-        const arabicVoice = voices.find(voice => voice.lang.startsWith('ar-'));
-        
-        if (arabicVoice) {
-            utterance.voice = arabicVoice;
-        } else {
-            console.warn("No Arabic voice found on this device. Using browser's default.");
-        }
-        speechSynthesis.speak(utterance);
-      };
-      
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = (e) => {
-        console.error('Speech synthesis error:', e);
-        setIsSpeaking(false);
-      };
-      
-      // Voices might load asynchronously.
-      if (speechSynthesis.getVoices().length === 0) {
-        speechSynthesis.onvoiceschanged = setVoiceAndSpeak;
-      } else {
-        setVoiceAndSpeak();
-      }
-      
-      setIsSpeaking(true);
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      speakText(text);
     } else {
-        alert("متصفحك لا يدعم ميزة قراءة النص.");
+      window.speechSynthesis.onvoiceschanged = () => {
+        speakText(text);
+        window.speechSynthesis.onvoiceschanged = null;
+      };
     }
-  };
+  }, [isSpeaking, text, speakText]);
 
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      if (utteranceRef.current) {
+        utteranceRef.current.onend = null;
+        utteranceRef.current.onerror = null;
+      }
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   return (
-    <div className={`mt-4 bg-black/5 dark:bg-black/20 p-4 rounded-xl relative transition-all duration-500 ${showNotification ? 'shadow-lg shadow-cyan-500/30' : ''}`}>
-      <div className="absolute top-2 left-2 flex flex-wrap gap-1 z-10">
-         <button
-            onClick={onSave}
-            className="p-2 bg-black/5 dark:bg-white/10 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-            aria-label="حفظ النتيجة"
-            title="حفظ النتيجة"
-          >
-           <Save className="w-5 h-5 text-slate-800 dark:text-white" />
-        </button>
-        <div className="relative" ref={shareContainerRef}>
-           <button
-              onClick={handleShare}
-              className="p-2 bg-black/5 dark:bg-white/10 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-              aria-label="مشاركة النص"
-              title="مشاركة النص"
-            >
-             <Share2 className="w-5 h-5 text-slate-800 dark:text-white" />
+    <div className="mt-6 p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white">النتيجة:</h3>
+        <div className="flex items-center gap-1 relative">
+          <button onClick={handleSpeak} title={isSpeaking ? "إيقاف القراءة" : "قراءة النص"} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors">
+            {isSpeaking ? <VolumeX size={20} className="text-red-500" /> : <Volume2 size={20} className="text-blue-500" />}
           </button>
-          {showShareOptions && (
-            <div className="absolute top-full mt-2 -left-2 bg-white dark:bg-gray-800 border dark:border-gray-600 p-2 rounded-xl shadow-xl z-20 flex flex-col gap-1 w-48">
-              <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareOptions(false)} className="flex items-center gap-3 w-full text-right p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-slate-800 dark:text-white">
-                <WhatsAppIcon />
-                <span>مشاركة عبر واتساب</span>
-              </a>
-              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareOptions(false)} className="flex items-center gap-3 w-full text-right p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-slate-800 dark:text-white">
-                <FacebookIcon />
-                <span>مشاركة عبر فيسبوك</span>
-              </a>
-              <a href={`https://t.me/share/url?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareOptions(false)} className="flex items-center gap-3 w-full text-right p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-slate-800 dark:text-white">
-                <TelegramIcon />
-                <span>مشاركة عبر تيليجرام</span>
-              </a>
+          <button onClick={handleCopy} title="نسخ" className="p-2 text-gray-600 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors">
+            {copied ? <Check size={20} className="text-green-500" /> : <Clipboard size={20} />}
+          </button>
+          <button onClick={onSave} title="حفظ" className="p-2 text-gray-600 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors">
+            <Save size={20} />
+          </button>
+          <button onClick={handleShare} title="مشاركة" className="p-2 text-gray-600 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors">
+            <Share2 size={20} />
+          </button>
+          <button onClick={onClear} title="مسح" className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors">
+            <Trash2 size={20} />
+          </button>
+
+          {showShareMenu && (
+             <div ref={shareMenuRef} className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-xl z-10 p-2 space-y-1">
+                <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><WhatsAppIcon/> واتساب</a>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=none&quote=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><FacebookIcon/> فيسبوك</a>
+                <a href={`https://t.me/share/url?url=none&text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><TelegramIcon/> تيليجرام</a>
             </div>
           )}
         </div>
-        <button
-          onClick={handleCopy}
-          className="p-2 bg-black/5 dark:bg-white/10 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-          aria-label="نسخ النص"
-          title="نسخ النص"
-        >
-          {isCopied ? <Check className="w-5 h-5 text-green-500" /> : <Clipboard className="w-5 h-5 text-slate-800 dark:text-white" />}
-        </button>
-        <button
-          onClick={handleSpeak}
-          className="p-2 bg-black/5 dark:bg-white/10 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-          aria-label={isSpeaking ? "إيقاف القراءة" : "قراءة النص"}
-          title={isSpeaking ? "إيقاف القراءة" : "قراءة النص"}
-        >
-          {isSpeaking ? <VolumeX className="w-5 h-5 text-yellow-500 dark:text-yellow-400" /> : <Volume2 className="w-5 h-5 text-slate-800 dark:text-white" />}
-        </button>
-         <button
-            onClick={onClear}
-            className="p-2 bg-black/5 dark:bg-white/10 rounded-full hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-            aria-label="مسح النتيجة"
-            title="مسح النتيجة"
-          >
-           <Trash2 className="w-5 h-5 text-red-500 dark:text-red-400" />
-        </button>
       </div>
-      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 pt-10">النتيجة:</h3>
-      <pre className="text-slate-800 dark:text-white whitespace-pre-wrap font-sans text-base">{text}</pre>
+      <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 text-lg leading-relaxed bg-white/30 dark:bg-black/20 p-4 rounded-lg">
+        {text}
+      </div>
       <TextAnalysis text={text} />
     </div>
   );
