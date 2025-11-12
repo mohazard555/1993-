@@ -5,10 +5,11 @@ import ServiceCard from './components/ServiceCard';
 import SubscriptionModal from './components/SubscriptionModal';
 import AdModal from './components/AdModal';
 import { generateText } from './services/geminiService';
-import { Zap, LockKeyhole, Settings, Sun, Moon, X } from 'lucide-react';
+import { Zap, LockKeyhole, Settings, Sun, Moon, X, AlertTriangle } from 'lucide-react';
 import SettingsModal from './components/SettingsModal';
 import CustomAdCard from './components/CustomAdCard';
 import ContactModal from './components/ContactModal';
+import Spinner from './components/Spinner';
 
 // Default configuration, used if nothing is in localStorage
 const DEFAULT_CONFIG: AppConfig = {
@@ -194,6 +195,50 @@ const Login: React.FC<{ onLoginSuccess: () => void; onCancel: () => void; config
 
 
 // ==========================================
+// API KEY SELECTION COMPONENT
+// ==========================================
+const ApiKeySelection: React.FC<{ onKeySelected: () => void }> = ({ onKeySelected }) => {
+    const handleSelectKey = async () => {
+        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+            await window.aistudio.openSelectKey();
+            // Assume success after triggering the dialog to avoid race conditions.
+            onKeySelected();
+        } else {
+            alert("آلية تحديد المفتاح غير متوفرة.");
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-100 dark:bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center z-50 p-4">
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-black/10 dark:border-white/10 w-full max-w-md mx-auto text-center">
+                <div className="flex flex-col items-center mb-6">
+                    <div className="p-3 bg-yellow-500/20 rounded-full mb-3">
+                        <AlertTriangle className="w-8 h-8 text-yellow-400 dark:text-yellow-300" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">مطلوب مفتاح API</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-2">
+                        لاستخدام هذا التطبيق، يجب عليك أولاً تحديد مفتاح واجهة برمجية (API Key) من Google AI Studio.
+                    </p>
+                </div>
+                <button
+                    onClick={handleSelectKey}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105"
+                >
+                    اختيار مفتاح API
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                    سيتم استخدام هذا المفتاح لإجراء طلبات إلى Gemini API. قد يتم تطبيق رسوم. 
+                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-400">
+                         اعرف المزيد عن الفوترة
+                    </a>.
+                </p>
+            </div>
+        </div>
+    );
+};
+
+
+// ==========================================
 // HEADER & THEME TOGGLE
 // ==========================================
 const ThemeToggle: React.FC = () => {
@@ -269,6 +314,23 @@ const App: React.FC = () => {
   const [showLogin, setShowLogin] = useState<boolean>(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const clickTimeoutRef = useRef<number | null>(null);
+  
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null: checking, false: no key, true: key selected
+
+  // Effect to check for API key on startup
+  useEffect(() => {
+    const checkApiKey = async () => {
+      // The `aistudio` object is injected by the hosting environment.
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const userHasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(userHasKey);
+      } else {
+        console.warn("aistudio API key selection mechanism not found. Assuming key is present.");
+        setHasApiKey(true); // Fallback for environments where aistudio is not available
+      }
+    };
+    checkApiKey();
+  }, []);
 
   // Effect to handle config changes
   useEffect(() => {
@@ -327,7 +389,14 @@ const App: React.FC = () => {
       playNotificationSound();
     } catch (error) {
       console.error("Failed to fetch AI result:", error);
-      setAppData(prev => ({...prev, results: { ...prev.results, [service]: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.' }}));
+      let errorMessage = 'حدث خطأ ما. يرجى المحاولة مرة أخرى.';
+       if (error instanceof Error && error.message.includes('Requested entity was not found')) {
+        errorMessage = "فشل التحقق من مفتاح API. يرجى تحديد مفتاح صالح مرة أخرى.";
+        setHasApiKey(false); // Reset and force user to select a key again.
+      } else if (error instanceof Error) {
+        errorMessage = `عذراً، حدث خطأ: ${error.message}`;
+      }
+      setAppData(prev => ({...prev, results: { ...prev.results, [service]: errorMessage }}));
     } finally {
       setGeneratingService(null);
       setGenerationRequest(null);
@@ -388,6 +457,19 @@ const App: React.FC = () => {
   const handleToggleService = (serviceType: ServiceType) => {
     setActiveService(prev => (prev === serviceType ? null : serviceType));
   };
+  
+  // Render states based on API key status
+  if (hasApiKey === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-gradient-to-br from-gray-900 via-slate-900 to-black">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!hasApiKey) {
+    return <ApiKeySelection onKeySelected={() => setHasApiKey(true)} />;
+  }
 
   if (showLogin && appConfig.login.enabled) {
     return <Login onLoginSuccess={handleLoginSuccess} onCancel={() => setShowLogin(false)} config={appConfig.login} />;
