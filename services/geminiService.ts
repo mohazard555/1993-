@@ -1,13 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const generateText = async (prompt: string): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error('API_KEY is not configured in the environment.');
-  }
+  // The explicit check for process.env.API_KEY is removed.
+  // The Gemini SDK's constructor will handle missing or invalid keys,
+  // and the catch block will propagate the error to the UI for user-friendly display.
   try {
-    // Create a new GoogleGenAI instance right before making an API call.
-    // This ensures it always uses the most up-to-date API key selected
-    // by the user via the aistudio dialog.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const response = await ai.models.generateContent({
@@ -17,8 +14,7 @@ export const generateText = async (prompt: string): Promise<string> => {
     return response.text;
   } catch (error) {
     console.error("Error generating text with Gemini:", error);
-    // Re-throw the error so the UI layer can handle it, for example,
-    // by asking the user to select a new API key.
+    // Re-throw the error so the UI layer can handle it.
     throw error;
   }
 };

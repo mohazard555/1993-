@@ -367,6 +367,14 @@ const App: React.FC = () => {
     }
   }, [generationRequest]);
 
+  const handleAdFinished = useCallback(() => {
+    setShowAdModal(false);
+    if (appConfig.adSettings.postAdUrl) {
+      window.open(appConfig.adSettings.postAdUrl, '_blank');
+    }
+    fetchAiResult();
+  }, [fetchAiResult, appConfig.adSettings.postAdUrl]);
+
   const startAdFlow = useCallback(() => {
     if(appConfig.adSettings.videoUrls.length === 0) {
         handleAdFinished();
@@ -375,7 +383,7 @@ const App: React.FC = () => {
     const randomAdUrl = appConfig.adSettings.videoUrls[Math.floor(Math.random() * appConfig.adSettings.videoUrls.length)];
     setCurrentAdUrl(randomAdUrl);
     setShowAdModal(true);
-  }, [appConfig.adSettings.videoUrls]);
+  }, [appConfig.adSettings.videoUrls, handleAdFinished]);
 
   const handleGenerate = useCallback((serviceType: ServiceType, prompt: string) => {
     setGeneratingService(serviceType);
@@ -412,14 +420,6 @@ const App: React.FC = () => {
     setShowSubscriptionModal(false);
     startAdFlow();
   }, [startAdFlow]);
-
-  const handleAdFinished = useCallback(() => {
-    setShowAdModal(false);
-    if (appConfig.adSettings.postAdUrl) {
-      window.open(appConfig.adSettings.postAdUrl, '_blank');
-    }
-    fetchAiResult();
-  }, [fetchAiResult, appConfig.adSettings.postAdUrl]);
   
   const handleToggleService = (serviceType: ServiceType) => {
     setActiveService(prev => (prev === serviceType ? null : serviceType));

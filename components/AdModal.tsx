@@ -82,8 +82,9 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
       // If modal closed while API was loading, do nothing.
       if (!document.getElementById(PLAYER_ID)) return;
       
-      const videoIdMatch = adUrl.match(/embed\/([^?]+)/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = adUrl.match(regExp);
+      const videoId = (match && match[2].length === 11) ? match[2] : null;
 
       if (!videoId) {
         console.error('Could not parse video ID from URL:', adUrl);
