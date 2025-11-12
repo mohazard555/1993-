@@ -107,8 +107,9 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
     if (!isOpen) {
       return;
     }
-
+    
     setCountdown(duration);
+    startCountdown(); // Start the countdown as soon as the modal opens for reliability
 
     // Safety net in case YouTube API fails or video doesn't play
     const safetyTimeout = setTimeout(() => {
@@ -123,7 +124,7 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
 
       if (!videoId) {
         console.error('Could not parse video ID from URL:', adUrl);
-        startCountdown(); // Fallback to timer if ID parsing fails
+        // Countdown is already running, so no need for a fallback here
         return;
       }
       
@@ -145,12 +146,7 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
             // Autoplay might be blocked, explicitly play.
             event.target.playVideo();
           },
-          onStateChange: (event: any) => {
-            // When video starts playing, start the countdown, but only once.
-            if (event.data === window.YT.PlayerState.PLAYING && !intervalRef.current) {
-              startCountdown();
-            }
-          },
+          // onStateChange is no longer needed to trigger the countdown
         },
       });
     });

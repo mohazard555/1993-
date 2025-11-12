@@ -29,7 +29,6 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -39,6 +38,16 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  // Cleanup effect to stop speech synthesis when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
   }, []);
 
   const handleCopy = () => {
@@ -62,41 +71,8 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
     }
   };
 
-  const speakText = useCallback((textToSpeak: string) => {
-      const voices = window.speechSynthesis.getVoices();
-      const arabicVoice = voices.find(voice => voice.lang.startsWith('ar'));
-  
-      const utterance = utteranceRef.current || new SpeechSynthesisUtterance(textToSpeak);
-      if (!utteranceRef.current) {
-          utteranceRef.current = utterance;
-      }
-      
-      utterance.text = textToSpeak;
-      utterance.lang = 'ar-SA';
-  
-      if (arabicVoice) {
-        utterance.voice = arabicVoice;
-      } else {
-        console.warn('No Arabic voice found. Using browser default for ar-SA.');
-      }
-  
-      utterance.onend = () => {
-        setIsSpeaking(false);
-      };
-  
-      utterance.onerror = (event) => {
-        console.error('SpeechSynthesisUtterance.onerror', event);
-        alert('عذراً، حدث خطأ أثناء محاولة قراءة النص. قد لا يكون هناك صوت عربي متاح على جهازك أو أن هناك مشكلة في محرك الصوت.');
-        setIsSpeaking(false);
-      };
-      
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-      setIsSpeaking(true);
-  }, []);
-
   const handleSpeak = useCallback(() => {
-    if (!text) return;
+    if (!text || text.trim() === '') return;
 
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -104,27 +80,46 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
       return;
     }
 
+    const startSpeech = () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ar-SA';
+      
+      const voices = window.speechSynthesis.getVoices();
+      const arabicVoice = voices.find(v => v.lang === 'ar-SA') || voices.find(v => v.lang.startsWith('ar'));
+      
+      if (arabicVoice) {
+        utterance.voice = arabicVoice;
+      } else {
+        console.warn('No Arabic voice found. Using browser default for ar-SA.');
+      }
+      
+      utterance.onend = () => setIsSpeaking(false);
+      
+      utterance.onerror = (event) => {
+        console.error('SpeechSynthesisUtterance.onerror', event);
+        alert('عذراً، حدث خطأ أثناء محاولة قراءة النص. قد لا يكون هناك صوت عربي متاح على جهازك أو أن هناك مشكلة في محرك الصوت.');
+        setIsSpeaking(false);
+      };
+      
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    };
+
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
-      speakText(text);
+      startSpeech();
     } else {
       window.speechSynthesis.onvoiceschanged = () => {
-        speakText(text);
+        startSpeech();
         window.speechSynthesis.onvoiceschanged = null;
       };
     }
-  }, [isSpeaking, text, speakText]);
+  }, [isSpeaking, text]);
 
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-      if (utteranceRef.current) {
-        utteranceRef.current.onend = null;
-        utteranceRef.current.onerror = null;
-      }
-      window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
 
   return (
     <div className="mt-6 p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10">
@@ -151,7 +146,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
              <div ref={shareMenuRef} className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-xl z-10 p-2 space-y-1">
                 <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><WhatsAppIcon/> واتساب</a>
                 <a href={`https://www.facebook.com/sharer/sharer.php?u=none&quote=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><FacebookIcon/> فيسبوك</a>
-                <a href={`https://t.me/share/url?url=none&text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><TelegramIcon/> تيليجرام</a>
+                <a href={`httpshttps://t.me/share/url?url=none&text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><TelegramIcon/> تيليجرام</a>
             </div>
           )}
         </div>
