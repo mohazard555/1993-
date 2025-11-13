@@ -10,6 +10,15 @@ import SettingsModal from './components/SettingsModal';
 import CustomAdCard from './components/CustomAdCard';
 import ContactModal from './components/ContactModal';
 
+// ==========================================
+// PUBLIC GIST CONFIGURATION
+// ==========================================
+// The user should replace the empty string with their public Gist's "Raw" URL.
+// IMPORTANT: The Gist content should be a JSON object with a structure similar to AppData.
+// Example URL: 'https://gist.githubusercontent.com/username/gistid/raw/filename.json'
+export const PUBLIC_GIST_RAW_URL = 'https://gist.githubusercontent.com/mohazard555/2dddbc12618c36beaf6e03bbcf7331c8/raw/ce16b2c93002f2c290f5815e4c235206a1ceb735/samproai-data.json'; 
+
+
 // Default configuration, used if nothing is in localStorage
 const DEFAULT_CONFIG: AppConfig = {
   login: {
@@ -36,7 +45,7 @@ const DEFAULT_CONFIG: AppConfig = {
       telegram: 'developer_username',
     },
   },
-  siteLogoUrl: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pbllNaW4gbWVldCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjOGI1ODkzIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZmlsbD0idXJsKCNncmFkKSIgZD0iTTEyOCAwQzU3LjMxMiAwIDAgNTcuMzEyIDAgMTI4czU3LjMxMiAxMjggMTI4IDEyOGMxNS45ODQgMCAzMS4xMjUtMi44NjcgNDUuMjgxLTguMjY2TDE2MC4xNTYgMTkzYy05LjA4NiA0LjA2My0xOS4yNjUgNi4zMTMtMjkuODkxIDYuMzEzLTM4LjM1OCAwLTY5LjQzOC0zMS4wOC02OS40MzgtNjkuNDM4cy0zMS4wOC02OS40MzcgNjkuNDM4LTY5LjQzN0M5OC40MSA2MC40MzggODUuMjUgNzEuMjY1IDc4LjcxOCA4NS4xODdsMTguMTg4IDMxLjUwMWMzLjY2NC03LjYwMiA5LjY0MS0xMy41ODIgMTcuMjQyLTE3LjI0MmwzMS41LTE4LjE4OEMxNDEuMjY1IDcyLjQ0MSAxMjguNDI2IDYwLjQzNyAxMTIgNjAuNDM3Yy0zNC4wMDggMC02MS41NDcgMjcuNTM5LTYxLjU0NyA2MS41NDdzMjcuNTM5IDYxLjU0NyA2MS41NDcgNjEuNTQ3YzE2LjM1MiAwIDMxLjA5NC02LjM1MiA0MS45ODQtMTYuNzVsMTcuNjg4IDI5LjUyM0MxNTcuMjY1IDIxNS4yMSA3IDE5Ni41NiAyMjguMzI4IDE3My4yNjYgMjQzLjE0IDU4LjQ0MSAxNzMuMjY1IDI4LjM1MiAxMjggMHptNzAuOTg0IDEwMS40NTNjLTguOTYgNS4xNjQtMTYuMjgxIDEyLjQ4NC0yMS40NDEgMjEuNDQxbC0xNC40MjItMjUuMDA0Yy43MDMtLjQyMiAxLjQxNC0uODI4IDIuMTE3LTEuMjg5IDguODMyLTUuMTAyIDE5LjUyMy02LjUwOCAzMC4zMDQtMy45NDUgMTAuNzY2IDIuNTU5IDE5LjM5OCA5Ljk2MSAyMy40MDYgMTkuODk4IDQuMDEyIDkuOTM4IDIuODggMjEuMTgtMy4zNTIgMzAuMTE3bC0yNS4wMDQgMTQuNDIxYy04Ljk2IDUuMTY0LTE5Ljc5NyA2LjM1Mi0zMC4xMTcgMy4zNTItOS45MzgtNC4wMDgtMTcuMzQ4LTEyLjYzMy0xOS44OTgtMjMuNDA2bC0zNi4yMzQgMjAuOTE4YzEyLjg3NSAyMi4zMDggMzcuNTM5IDMxLjgxMiA2MC40MjIgMjIuNTk0IDIyLjg4My05LjIyMyAzNi4wMzEtMzIuNzE0IDI5LjYwMi01Ni4xNDRjLTYuNDItMjMuNDMxLTI5LjkxNC0zNi41NzgtNTMuMzM2LTMwLjE1OCAxLjYwMi0yLjc3MyAzLjQyMi01LjQyNiA1LjQzLTcuOTc3bDI4LjEyNS00OC43MTFjNS42NTYgOS43OTcgOC42NzIgMjAuODYzIDguNjcyIDMyLjQ1MyAwIDUuOTY1LS44MjQgMTEuNzUtMi4zNTIgMTcuMjY2em0tOTUuODMyIDQuMjY2YzAtMTMuNDAzIDQuNDE0LTI2LjA0NyAxMi4xNzItMzYuMjM0bDIwLjkxOCAzNi4yMzRjLTkuMjE5IDIyLjg4My0zMi43MTUgMzYuMDMxLTU2LjE0NSAyOS42MDItMjMuNDMtNi40MjYtMzYuNTc4LTI5LjkxOC0zMC4xNTYtNTMuMzQ4IDYuNDItMjMuNDMgMjkuOTItMzYuNTc4IDUzLjM0OC0zMC4xNTYgMi43NzMgMS42MDUgNS40MjYgMy40MjIgNy45NzcgNS40M2wtNDguNzE5IDI4LjEyNWM5Ljc5NyA1LjY1NiAyMC44NjMgOC42NjggMzIuNDUzIDguNjY4IDUuOTY1IDAgMTEuNzUtLjgyIDE3LjI2Ni0yLjM1MmwtMjIuNDg0IDM4Ljk1M0M3NC44MTIgMTYyLjI1IDYyLjYwOSAxNDkuNSA2Mi4xMDkgMTMyLjk2OXptNTIuNTMxIDE4LjUyM2MtOS44MzYgNS42ODgtMTYuNzUgMTUuODEtMTYuNzUgMjcuNDUzIDAgMTcuMjgxIDEzLjk2OSAzMS4yNSAzMS4yNSAzMS4yNSAxMS42NDEgMCAyMS43NjYtNi45MTQgMjcuNDUzLTE2Ljc1bC0yMC45MjItMzYuMjMyYy0zLjc4MS02LjU0My0xMC41NDctMTEuMDc0LTE4LjQyNi0xMS4wNzQtLjExMyAwLS4yMjcuMDEyLS4zNC4wMDRsLTQuMDMxIDIyLjAyYy0uNDQ5IDIuNDQxLTEuNzc3IDQuNTY2LTMuNzU0IDUuOTE4em00NS4xNzIgMzYuNjA1Yy0xLjM1NSAyLjM0OC0zLjIzIDQuMjUtNS40MyA1Ljc0Mmw0OC43MTkgMjguMTI5Yy0zLjQ0NS01Ljg3NS02LjI0Mi0xMi4wNzQtOC4yOTctMTguNTQzTDE2MC4zMTIgMTg4LjE0NHptLTM3LjQ4NC02NC44NjdjLS41MTIgMC0xLjAyMy4wNy0xLjUyMy4yMDNsMjIuMDIzIDQuMDM1Yy4yMTUtLjExMy40My0uMjE1LjY0MS0uMzQ0IDYuNTQzLTMuNzggMTEuMDc0LTEwLjU0NyAxMS4wNzQtMTguNDI2IDAtLjExMy0uMDEyLS4yMjctLjAwNC0uMzM2bC0zNi4yMzQtMjAuOTIxYy01LjY4OC05LjgzNi0xNS44MTItMTYuNzUtMjcuNDUzLTE2Ljc1cy0yMS43NjYgNi45MTQtMjcuNDUzIDE2Ljc1Yy01LjY4OCA5LjgzMi02LjkxNCAyMS43NjYtMi44OTEgMzIuMzU5bDM4Ljk1My0yMi40ODRjLTYuMDM1LTEuOTY1LTEyLjQwMi0yLjk2NS0xOC45MDYtMi45NjUtMTMuNDAzIDAtMjYuMDQ3IDQuNDE4LTM2LjIzNCAxMi4xNzJsMzYuMjM0IDIwLjkxOGM5LjIyMyAyMi44ODcgMzIuNzE1IDIwLjYxNCA1Ni4xNDUgMjkuNjA1IDIyLjg4MyA2LjQyNiAzNC4xNDgtMjkuOTE0IDMwLjE1Mi01My4zNDQtNi40MjItMjMuNDI2LTI5LjkyMi0zNi41NzQtNTMuMzQ0LTMwLjE1Mi0xLjU5OCAyLjc3My0zLjQxOCAxMS4zMjgtNS40MjYgNy45NzdMNDMuMTg3IDExMy44MmMtNS42NTYtOS43OTctOC42NjgtMjAuODYzLTguNjY4LTMyLjQ1MyAwLTUuOTY1LjgyNC0xMS43NSAyLjM1Mi0xNy4yNjZsMjIuNDg0IDM4Ljk1M0M4Mi43MzQgOTQuMjgxIDk0LjkzNyAxMDcgMTEyLjUgMTA3YzYuNTA0IDAgMTIuOTE4LTEuMDQzIDE4LjkwNi0yLjk2NWwtMjAuOTE4IDM2LjIzNGM1LjY4OCA5LjgzNiAxNS44MSA5Ljc1IDI3LjQ1MyAxNi43NXoiLz48L3N2Zz4=",
+  siteLogoUrl: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pbllNaW4gbWVldCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjOGI1ODkzIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZmlsbD0idXJsKCNncmFkKSIgZD0iTTEyOCAwQzU3LjMxMiAwIDAgNTcuMzEyIDAgMTI4czU3LjMxMiAxMjggMTI4IDEyOGMxNS45ODQgMCAzMS4xMjUtMi44NjcgNDUuMjgxLTguMjY2TDE2MC4xNTYgMTkzYy05LjA4NiA0LjA2My0xOS4yNjUgNi4zMTMtMjkuODkxIDYuMzEzLTM4LjM1OCAwLTY5LjQzOC0zMS4wOC02OS40MzgtNjkuNDM4cy0zMS4wOC02OS40MzcgNjkuNDM4LTY5LjQzN0M5OC40MSA2MC40MzggODUuMjUgNzEuMjY1IDc4LjcxOCA4NS4xODdsMTguMTg4IDMxLjUwMWMzLjY2NC03LjYwMiA5LjY0MS0xMy41ODIgMTcuMjQyLTE3LjI0MmwzMS41LTE4LjE4OEMxNDEuMjY1IDcyLjQ0MSAxMjguNDI2IDYwLjQzNyAxMTIgNjAuNDM3Yy0zNC4wMDggMC02MS41NDcgMjcuNTM5LTYxLjU0NyA2MS41NDdzMjcuNTM5IDYxLjU0NyA2MS41NDcgNjEuNTQ3YzE2LjM1MiAwIDMxLjA5NC02LjM1MiA0MS45ODQtMTYuNzVsMTcuNjg4IDI5LjUyM0MxNTcuMjY1IDIxNS4yMSA3IDE5Ni41NiAyMjguMzI4IDE3My4yNjYgMjQzLjE0IDU4LjQ0MSAxNzMuMjY1IDI4LjM1MiAxMjggMHptNzAuOTg0IDEwMS40NTNjLTguOTYgNS4xNjQtMTYuMjgxIDEyLjQ4NC0yMS40NDEgMjEuNDQxbC0xNC40MjItMjUuMDA0Yy43MDMtLjQyMiAxLjQxNC0uODI4IDIuMTE3LTEuMjg5IDguODMyLTUuMTAyIDE5LjUyMy02LjUwOCAzMC4zMDQtMy45NDUgMTAuNzY2IDIuNTU5IDE5LjM5OCA5Ljk2MSAyMy40MDYgMTkuODk4IDQuMDEyIDkuOTM4IDIuODggMjEuMTgtMy4zNTIgMzAuMTE3bC0yNS4wMDQgMTQuNDIxYy04Ljk2IDUuMTY0LTE5Ljc5NyA2LjM1Mi0zMC4xMTcgMy4zNTItOS45MzgtNC4wMDgtMTcuMzQ4LTEyLjYzMy0xOS44OTgtMjMuNDA2bC0zNi4yMzQgMjAuOTE4YzEyLjg3NSAyMi4zMDggMzcuNTM5IDMxLjgxMiA2MC40MjIgMjIuNTk0IDIyLjg4My05LjIyMyAzNi4wMzEtMzIuNzE0IDI5LjYwMi01Ni4xNDRjLTYuNDItMjMuNDMxLTI5LjkxNC0zNi41NzgtNTMuMzM2LTMwLjE1OCAxLjYwMi0yLjc3MyAzLjQyMi01LjQyNiA1LjQzLTcuOTc3bDI4LjEyNS00OC43MTFjNS42NTYgOS43OTcgOC42NzIgMjAuODYzIDguNjcyIDMyLjQ1MyAwIDUuOTY1LS44MjQgMTEuNzUtMi4zNTIgMTcuMjY2em0tOTUuODMyIDQuMjY2YzAtMTMuNDAzIDQuNDE0LTI2LjA0NyAxMi4xNzItMzYuMjM0bDIwLjkxOCAzNi4yMzRjLTkuMjE5IDIyLjg4My0zMi43MTUgMzYuMDMxLTU2LjE0NSAyOS42MDItMjMuNDMtNi40MjYtMzYuNTc4LTI5LjkxOC0zMC4xNTYtNTMuMzQ4IDYuNDItMjMuNDMgMjkuOTItMzYuNTc4IDUzLjM0OC0zMC4xNTYgMi43NzMgMS42MDUgNS40MjYgMy40MjIgNy45NzcgNS40M2wtNDguNzE5IDI4LjEyNWM5Ljc5NyA1LjY1NiAyMC44NjMgOC42NjggMzIuNDUzIDguNjY4IDUuOTY1IDAgMTEuNzUtLjgyIDE3LjI2Ni0yLjM1MmwtMjIuNDg0IDM4Ljk1M0M3NC44MTIgMTYyLjI1IDYyLjYwOSAxNDkuNSA2Mi4xMDkgMTMyLjk2OXptNTIuNTMxIDE4LjUyM2MtOS44MzYgNS42ODgtMTYuNzUgMTUuODEtMTYuNzUgMjcuNDUzIDAgMTcuMjgxIDEzLjk2OSAzMS4yNSAzMS4yNSAzMS4yNSAxMS42NDEgMCAyMS43NjYtNi45MTQgMjcuNDUzLTE2Ljc1bC0yMC45MjItMzYuMjMyYy0zLjc4MS02LjU0My0xMC41NDctMTEuMDc0LTE4LjQyNi0xMS4wNzQtLjExMyAwLS4yMjcuMDEyLS4zNC4wMDRsLTQuMDMxIDIyLjAyYy0uNDQ5IDIuNDQxLTEuNzc3IDQuNTY2LTMuNzU0IDUuOTE4em00NS4xNzIgMzYuNjA1Yy0xLjM1NSAyLjM0OC0zLjIzIDQuMjUtNS40MyA1Ljc0Mmw0OC43MTkgMjguMTI5Yy0zLjQ0NS01Ljg3NS02LjI0Mi0xMi4wNzQtOC4yOTctMTguNTQzTDE2MC4zMTIgMTg4LjE0NHptLTM3LjQ4NC02NC44NjdjLS41MTIgMC0xLjAyMy4wNy0xLjUyMy4yMDNsMjIuMDIzIDQuMDM1Yy4yMTUtLjExMy40My0uMjE1LjY0MS0uMzQ0IDYuNTQzLTMuNzggMTEuMDc0LTEwLjU0NyAxMS4wNzQtMTguNDI2IDAtLjExMy0uMDEyLS4yMjctLjAwNC0uMzM2bC0zNi4yMzQtMjAuOTIxYy01LjY4OC05LjgzNi0xNS44MTItMTYuNzUtMjcuNDUzLTE2Ljc1cy0yMS43NjYgNi45MTQtMjcuNDUzIDE2Ljc1Yy01LjY4OCA5LjgzMi02LjkxNCAyMS43NjYtMi44OTEgMzIuMzU5bDM4Ljk1My0yMi40ODRjLTYuMDM1LTEuOTY1LTEyLjQwMi0yLjk2NS0xOC45MDYtMi45NjUtMTMuNDAzIDAtMjYuMDQ3IDQuNDE4LTM2LjIzNCAxMi4xNzJsMzYuMjM0IDIwLjkxOGM5LjIyMyAyMi44ODcgMzIuNzE1IDIwLjYxNCA1Ni4xNDUgMjkuNjA1IDIyLjg4MyA2LjQyNiAzNC4xNDgtMjkuOTE0IDMwLjE1Mi01My4zNDQtNi40MjItMjMuNDI2LTI5LjkyMi0zNi41NzQtNTMuMzQ0LTMwLjE1Mi0xLjU5OCAyLjc3My0zLjQxOCAxMS4zMjgtNS40MjYgNy45NzdMNDMuMTg3IDExMy44MmMtNS42NTYtOS43OTctOC42NjgtMjAuODYzLTguNjY4LTMyLjQ1MiwgMC01Ljk2NS44MjQtMTEuNzUgMi4zNTItMTcuMjY2bDIyLjQ4NCAzOC45NTNDODIuNzM0IDk0LjI4MSA5NC45MzcgMTA3IDExMi41IDEwN2M2LjUwNCAwIDEyLjkxOC0xLjA0MyAxOC45MDYtMi45NjVsLTIwLjkxOCAzNi4yMzRjNS42ODggOS44MzYgMTUuODEgOS43NSAyNy40NTMgMTYuNzV6Ii8+PC9zdmc+",
   siteName: "ذكاء النصوص AI",
 };
 
@@ -305,6 +314,39 @@ const App: React.FC = () => {
     localStorage.setItem('appData', JSON.stringify(appData));
   }, [appData]);
 
+  // Effect to fetch public data from Gist on startup
+  useEffect(() => {
+    const fetchAndMergePublicData = async () => {
+      // Only run if the URL has been configured by the developer.
+      if (!PUBLIC_GIST_RAW_URL || PUBLIC_GIST_RAW_URL.trim() === '') {
+          console.info("Public Gist URL is not configured. App will use local data only.");
+          return;
+      }
+
+      try {
+        // Fetch the latest data from the public Gist. 'no-store' ensures freshness.
+        const response = await fetch(PUBLIC_GIST_RAW_URL, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Gist fetch failed with status: ${response.status}`);
+        }
+        const gistData = await response.json();
+
+        // The Gist is the single source of truth for shared/public data.
+        // We merge it carefully to avoid overwriting user-specific local data.
+        setAppData(currentLocalData => ({
+          ...currentLocalData, // Retains user's local 'results' and 'savedResults'.
+          customAds: gistData.customAds || [], // Overwrites ads with the version from the Gist.
+        }));
+
+      } catch (error) {
+        console.error('Failed to load or process public data from Gist. The app will continue with local data.', error);
+        // Optional: show a toast/notification to the user about the failure.
+      }
+    };
+
+    fetchAndMergePublicData();
+  }, []); // The empty dependency array ensures this runs only once when the app starts.
+
   useEffect(() => {
     const subscribed = localStorage.getItem('isUserSubscribed') === 'true';
     setIsSubscribed(subscribed);
@@ -355,12 +397,37 @@ const App: React.FC = () => {
       console.error("Failed to fetch AI result:", error);
       let errorMessage = 'عذراً، حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.';
       if (error instanceof Error) {
-        if (error.message.includes('API_KEY is not configured')) {
-            errorMessage = 'خطأ في الإعدادات: مفتاح API للذكاء الاصطناعي غير موجود. يرجى مراجعة المسؤول.';
-        } else if (error.message.includes('API Key') || error.message.includes('entity was not found')) {
-            errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً بسبب مشكلة في الإعدادات. قد يكون مفتاح API غير صالح أو أن الخدمة محظورة.';
-        } else {
-            errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
+        // Attempt to parse a more specific error message from the API response
+        try {
+            // Check for our custom "not found" error first
+            if (error.message.includes("AI API Key not found")) {
+                errorMessage = 'خطأ في الإعدادات: مفتاح API للذكاء الاصطناعي غير موجود. يرجى مراجعة المسؤول.';
+                return; // Early return
+            }
+
+            // Look for a JSON string within the error message
+            const jsonMatch = error.message.match(/\{.*\}/s);
+            if (jsonMatch) {
+                const errorObj = JSON.parse(jsonMatch[0]);
+                const apiError = errorObj.error || errorObj;
+                const code = apiError.code || 'N/A';
+                let msg = apiError.message || 'No specific message.';
+
+                // Make specific error messages more user-friendly
+                if (msg.includes("API key not valid")) {
+                  msg = "مفتاح API المستخدم غير صالح. يرجى التحقق منه في الإعدادات.";
+                } else if (code === 503 || msg.toLowerCase().includes('overloaded')) {
+                  msg = "النموذج перевантажений حاليًا. يرجى المحاولة مرة أخرى بعد قليل.";
+                }
+
+                errorMessage = `فشل الاتصال بالخدمة (خطأ ${code}): ${msg}`;
+            } else if (error.message.includes('API Key') || error.message.includes('entity was not found')) {
+                 errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. قد يكون مفتاح API غير صالح أو أن الخدمة محظورة.';
+            } else {
+                 errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
+            }
+        } catch (parseError) {
+             errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
         }
       }
       setAppData(prev => ({...prev, results: { ...prev.results, [service]: errorMessage }}));
@@ -372,7 +439,9 @@ const App: React.FC = () => {
   const handleAdFinished = useCallback(() => {
     setShowAdModal(false);
     const postUrl = appConfig.adSettings.postAdUrl;
-    if (postUrl && postUrl.trim()) {
+    // FIX: Add a `typeof` check to ensure `postUrl` is a string before calling `.trim()`.
+    // This prevents runtime errors if the value from localStorage is not a string and resolves the TS error.
+    if (typeof postUrl === 'string' && postUrl.trim()) {
         let url = postUrl.trim();
         if (!/^https?:\/\//i.test(url)) {
             url = 'https://' + url;
@@ -531,6 +600,7 @@ const App: React.FC = () => {
         setAppData={setAppData}
         config={appConfig}
         setConfig={setAppConfig}
+        publicGistUrl={PUBLIC_GIST_RAW_URL}
       />
       <ContactModal
         isOpen={isContactModalOpen}

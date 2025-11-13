@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { AppConfig, AppData, CustomAd, SavedResult } from '../types';
 import { saveToGist, loadFromGist, generateText } from '../services/geminiService';
-import { X, FileUp, FileDown, CloudUpload, CloudDownload, Github, Settings, Database, Save, Edit, Trash2, Image as ImageIcon, Link as LinkIcon, Menu, BookOpen, PlusCircle, Wifi } from 'lucide-react';
+import { X, FileUp, FileDown, CloudUpload, CloudDownload, Github, Settings, Database, Save, Edit, Trash2, Image as ImageIcon, Link as LinkIcon, Menu, BookOpen, PlusCircle, Wifi, CheckCircle2, XCircle } from 'lucide-react';
 import Spinner from './Spinner';
 
 // Utility function to read file as Base64
@@ -234,8 +234,13 @@ const ContentManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispa
 // ==========================================
 // Data Sync & Backup Tab
 // ==========================================
-const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch<React.SetStateAction<AppData>> }> = ({ appData, setAppData }) => {
-  const [gistUrl, setGistUrl] = useState(localStorage.getItem('gistUrl') || '');
+interface DataManagementTabProps {
+  appData: AppData;
+  setAppData: React.Dispatch<React.SetStateAction<AppData>>;
+  publicGistUrl: string;
+}
+
+const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppData, publicGistUrl }) => {
   const [token, setToken] = useState(localStorage.getItem('githubToken') || '');
   const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,12 +248,11 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
 
 
   useEffect(() => {
-    localStorage.setItem('gistUrl', gistUrl);
     localStorage.setItem('githubToken', token);
-  }, [gistUrl, token]);
+  }, [token]);
   
   const handleApiTest = async () => {
-    setTestStatus({ state: 'loading', message: 'جاري الاختبار...' });
+    setTestStatus({ state: 'loading', message: '' });
     try {
         await generateText("مرحبا"); // Simple prompt to test connectivity
         setTestStatus({ state: 'success', message: 'نجاح الاتصال! الخدمة تعمل بشكل جيد.' });
@@ -259,17 +263,17 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
   };
 
   const handleSync = async (action: 'save' | 'load') => {
-    if (!gistUrl || !token) {
-      setSyncStatus({ type: 'error', message: 'يرجى إدخال رابط Gist والرمز.' });
+    if (!publicGistUrl || !token) {
+      setSyncStatus({ type: 'error', message: publicGistUrl ? 'يرجى إدخال رمز GitHub.' : 'لم يتم تكوين رابط Gist في التطبيق.' });
       return;
     }
     setSyncStatus({ type: 'loading', message: action === 'save' ? 'جارٍ الحفظ...' : 'جارٍ التحميل...' });
     try {
       if (action === 'save') {
-        await saveToGist(gistUrl, token, appData);
+        await saveToGist(publicGistUrl, token, appData);
         setSyncStatus({ type: 'success', message: 'تم الحفظ بنجاح!' });
       } else {
-        const data = await loadFromGist(gistUrl, token);
+        const data = await loadFromGist(publicGistUrl, token);
         setAppData(data);
         setSyncStatus({ type: 'success', message: 'تم التحميل بنجاح!' });
       }
@@ -314,21 +318,33 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
     <>
       <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-black/10 dark:border-white/10 mb-6">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2"><Github /> المزامنة عبر Gist</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">احفظ بياناتك (النتائج، الإعلانات، ...) على GitHub Gist.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          <div className="space-y-4">
-            <input type="text" placeholder="رابط Gist Raw للمزامنة" value={gistUrl} onChange={e => setGistUrl(e.target.value)} className="w-full p-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-400 dark:border-gray-600 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 dark:focus:ring-cyan-400" />
+        <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">احفظ بياناتك (الإعلانات، ...) على GitHub Gist لمشاركتها مع جميع المستخدمين.</p>
+        
+        {publicGistUrl ? (
+            <div className="mb-4 p-3 bg-black/5 dark:bg-white/10 rounded-lg text-sm text-center text-gray-600 dark:text-gray-300">
+                <p>
+                    <strong>Gist المستهدف للمزامنة:</strong>
+                    <span className="block break-all font-mono text-xs mt-1" dir="ltr">{publicGistUrl}</span>
+                </p>
+            </div>
+        ) : (
+            <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-800/50 rounded-lg text-sm text-center text-yellow-800 dark:text-yellow-200">
+                <p><strong>تنبيه:</strong> لم يتم تكوين رابط Gist في كود التطبيق. المزامنة معطلة.</p>
+            </div>
+        )}
+
+        <div className="space-y-4">
             <input type="password" placeholder="GitHub Personal Access Token" value={token} onChange={e => setToken(e.target.value)} className="w-full p-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-400 dark:border-gray-600 rounded-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 dark:focus:ring-cyan-400" />
-          </div>
-          <div className="flex flex-col gap-3">
-            <button onClick={() => handleSync('save')} disabled={syncStatus.type === 'loading'} className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-blue-800">
-              {syncStatus.type === 'loading' ? <Spinner /> : <><CloudUpload size={20} /> حفظ إلى Gist</>}
-            </button>
-            <button onClick={() => handleSync('load')} disabled={syncStatus.type === 'loading'} className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-green-800">
-              {syncStatus.type === 'loading' ? <Spinner /> : <><CloudDownload size={20} /> تحميل من Gist</>}
-            </button>
-          </div>
+            <div className="flex flex-col md:flex-row gap-3">
+                <button onClick={() => handleSync('save')} disabled={syncStatus.type === 'loading' || !publicGistUrl} className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-gray-500">
+                {syncStatus.type === 'loading' ? <Spinner /> : <><CloudUpload size={20} /> حفظ إلى Gist</>}
+                </button>
+                <button onClick={() => handleSync('load')} disabled={syncStatus.type === 'loading' || !publicGistUrl} className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-gray-500">
+                {syncStatus.type === 'loading' ? <Spinner /> : <><CloudDownload size={20} /> تحميل من Gist</>}
+                </button>
+            </div>
         </div>
+
         {syncStatus.type !== 'idle' && (
           <div className={`mt-4 text-center p-2 rounded-lg text-sm ${syncStatus.type === 'success' ? 'bg-green-500/20 text-green-300' : syncStatus.type === 'error' ? 'bg-red-500/20 text-red-300' : 'hidden'}`}>
             {syncStatus.message}
@@ -341,9 +357,26 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
         <button onClick={handleApiTest} disabled={testStatus.state === 'loading'} className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-purple-800">
            {testStatus.state === 'loading' ? <Spinner /> : 'اختبار اتصال API'}
         </button>
-        {testStatus.state !== 'idle' && (
-            <div className={`mt-4 text-center p-3 rounded-lg text-sm ${testStatus.state === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                <p className="font-bold">{testStatus.message}</p>
+        {(testStatus.state === 'success' || testStatus.state === 'error') && (
+            <div className={`mt-4 p-3 rounded-xl ${
+                testStatus.state === 'success' 
+                ? 'bg-green-100 dark:bg-emerald-800' 
+                : 'bg-red-100 dark:bg-red-800'
+            }`}>
+                <div className="flex items-center justify-center gap-2">
+                    {testStatus.state === 'success' ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-emerald-300" />
+                    ) : (
+                        <XCircle className="w-5 h-5 text-red-600 dark:text-red-300" />
+                    )}
+                    <p className={`font-medium text-sm text-center ${
+                        testStatus.state === 'success' 
+                        ? 'text-green-900 dark:text-emerald-100' 
+                        : 'text-red-900 dark:text-red-100'
+                    }`}>
+                        {testStatus.message}
+                    </p>
+                </div>
             </div>
         )}
       </div>
@@ -375,9 +408,10 @@ interface SettingsModalProps {
   setAppData: React.Dispatch<React.SetStateAction<AppData>>;
   config: AppConfig;
   setConfig: (c: AppConfig) => void;
+  publicGistUrl: string;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, appData, setAppData, config, setConfig }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, appData, setAppData, config, setConfig, publicGistUrl }) => {
   const [activeTab, setActiveTab] = useState<'config' | 'content' | 'data'>('config');
 
   if (!isOpen) return null;
@@ -409,7 +443,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, appData,
         <div className="p-6 overflow-y-auto">
             {activeTab === 'config' && <AppConfigTab config={config} setConfig={setConfig} />}
             {activeTab === 'content' && <ContentManagementTab appData={appData} setAppData={setAppData} />}
-            {activeTab === 'data' && <DataManagementTab appData={appData} setAppData={setAppData} />}
+            {activeTab === 'data' && <DataManagementTab appData={appData} setAppData={setAppData} publicGistUrl={publicGistUrl} />}
         </div>
       </div>
     </div>
