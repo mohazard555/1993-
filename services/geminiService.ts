@@ -35,7 +35,7 @@ const getGistId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
-const getFilename = (url: string): string | null => {
+export const getFilename = (url: string): string | null => {
     const normalizedUrl = url.split('?')[0].replace(/\/$/, '');
     const match = normalizedUrl.match(FILENAME_REGEX);
     return match ? match[1] : 'ai-text-data.json';
@@ -82,14 +82,18 @@ export const loadFromGist = async (rawUrl: string, token: string): Promise<any> 
     const fileContent = gistData.files[filename].content;
 
     try {
+        if (!fileContent || fileContent.trim() === '') {
+             throw new Error('محتوى ملف Gist فارغ. لا يمكن تحليل البيانات.');
+        }
         return JSON.parse(fileContent);
     } catch (e) {
+        console.error("JSON Parse Error in loadFromGist:", e, "Content:", fileContent);
         throw new Error('فشل في تحليل محتوى JSON من ملف Gist.');
     }
 };
 
 
-export const saveToGist = async (rawUrl: string, token: string, data: any): Promise<void> => {
+export const saveToGist = async (rawUrl: string, token: string, data: any): Promise<any> => {
     if (!rawUrl || !token) {
         throw new Error('Gist URL and Token are required.');
     }
@@ -125,4 +129,6 @@ export const saveToGist = async (rawUrl: string, token: string, data: any): Prom
         const errorData = await response.json();
         throw new Error(`فشل حفظ البيانات إلى Gist: ${errorData.message}`);
     }
+    
+    return await response.json();
 };

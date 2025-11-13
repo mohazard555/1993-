@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { AppConfig, AppData, CustomAd, SavedResult } from '../types';
-import { saveToGist, loadFromGist, generateText } from '../services/geminiService';
+import { saveToGist, loadFromGist, generateText, getFilename } from '../services/geminiService';
 import { X, FileUp, FileDown, CloudUpload, CloudDownload, Github, Settings, Database, Save, Edit, Trash2, Image as ImageIcon, Link as LinkIcon, Menu, BookOpen, PlusCircle, Wifi, CheckCircle2, XCircle } from 'lucide-react';
 import Spinner from './Spinner';
 
@@ -273,8 +273,15 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ config, setConfig
     try {
       if (action === 'save') {
         const payload = { config, data: appData };
-        await saveToGist(publicGistUrl, token, payload);
-        const loadedData = await loadFromGist(publicGistUrl, token);
+        const updatedGist = await saveToGist(publicGistUrl, token, payload);
+        
+        const filename = getFilename(publicGistUrl);
+        if (!filename || !updatedGist.files || !updatedGist.files[filename]) {
+             throw new Error('فشل التحقق من البيانات بعد الحفظ. الملف غير موجود في استجابة Gist.');
+        }
+
+        const fileContent = updatedGist.files[filename].content;
+        const loadedData = JSON.parse(fileContent);
 
         if (loadedData && loadedData.config && loadedData.data) {
             setConfig(loadedData.config);
@@ -284,14 +291,16 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ config, setConfig
             throw new Error('فشل التحقق من البيانات بعد الحفظ. البيانات المحملة غير صالحة.');
         }
 
-      } else {
+      } else { // load action
         const loadedData = await loadFromGist(publicGistUrl, token);
          if (loadedData && loadedData.config && loadedData.data) {
             setConfig(loadedData.config);
             setAppData(loadedData.data);
             setSyncStatus({ type: 'success', message: 'تم التحميل بنجاح!' });
         } else {
-             throw new Error('فشل تحميل البيانات. هيكل البيانات في Gist غير صالح.');
+             // Fallback for old data structure
+             setAppData(loadedData);
+             setSyncStatus({ type: 'success', message: 'تم تحميل بيانات المحتوى بنجاح (بنية قديمة)!' });
         }
       }
     } catch (error) {
