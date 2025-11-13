@@ -43,24 +43,51 @@ const getFilename = (url: string): string | null => {
 
 export const loadFromGist = async (rawUrl: string, token: string): Promise<any> => {
     if (!rawUrl || !token) {
-        throw new Error('Gist URL and Token are required.');
+        throw new Error('Gist URL and Token are required for this operation.');
     }
-    
-    // Add a cache-busting query parameter to ensure the latest version is fetched.
-    const cacheBustedUrl = `${rawUrl.split('?')[0]}?_=${new Date().getTime()}`;
 
-    const response = await fetch(cacheBustedUrl, {
+    const gistId = getGistId(rawUrl);
+    const filename = getFilename(rawUrl);
+
+    if (!gistId || !filename) {
+        throw new Error('Invalid Gist URL. Could not extract Gist ID or filename.');
+    }
+
+    const apiUrl = `https://api.github.com/gists/${gistId}`;
+
+    const response = await fetch(apiUrl, {
         headers: {
             'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3.raw',
+            'Accept': 'application/vnd.github.v3+json',
         },
         cache: 'no-store',
     });
+
     if (!response.ok) {
+        if (response.status === 404) {
+             throw new Error(`فشل تحميل البيانات من Gist. لم يتم العثور على Gist (404). يرجى التحقق من الرابط.`);
+        }
+        if (response.status === 401 || response.status === 403) {
+            throw new Error(`فشل تحميل البيانات من Gist. فشل المصادقة (${response.status}). يرجى التحقق من رمز GitHub الخاص بك.`);
+        }
         throw new Error(`فشل تحميل البيانات من Gist. Status: ${response.status}`);
     }
-    return response.json();
+
+    const gistData = await response.json();
+
+    if (!gistData.files || !gistData.files[filename]) {
+        throw new Error(`الملف '${filename}' غير موجود في Gist.`);
+    }
+
+    const fileContent = gistData.files[filename].content;
+
+    try {
+        return JSON.parse(fileContent);
+    } catch (e) {
+        throw new Error('فشل في تحليل محتوى JSON من ملف Gist.');
+    }
 };
+
 
 export const saveToGist = async (rawUrl: string, token: string, data: any): Promise<void> => {
     if (!rawUrl || !token) {
