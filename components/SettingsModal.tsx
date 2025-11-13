@@ -84,13 +84,14 @@ const AppConfigTab: React.FC<{ config: AppConfig, setConfig: (c: AppConfig) => v
                 <legend className="px-2 font-bold text-lg text-slate-800 dark:text-white">الإعدادات العامة</legend>
                 <div className="space-y-4">
                      <div>
-                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">شعار الموقع (Favicon)</label>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">شعار الموقع</label>
                         <div className='flex items-center gap-4'>
-                            <img src={localConfig.siteLogoUrl} alt="Logo Preview" className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 p-1" />
+                            <img src={localConfig.siteLogoUrl} alt="Logo Preview" className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 p-1 object-contain" />
                             <button onClick={() => logoInputRef.current?.click()} className="flex-1 text-center p-2 bg-gray-100 dark:bg-gray-700/50 border border-gray-400 dark:border-gray-600 rounded-lg text-slate-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700">تغيير الشعار</button>
                             <input type="file" ref={logoInputRef} onChange={handleLogoChange} accept="image/*" className="hidden" />
                         </div>
                     </div>
+                    <FormField name="siteName" label="اسم الموقع" value={localConfig.siteName} />
                     <FormField name="subscriptionUrl" label="رابط الاشتراك" value={localConfig.subscriptionUrl} />
                 </div>
             </fieldset>

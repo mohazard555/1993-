@@ -59,6 +59,7 @@ export interface AppConfig {
     }
   };
   siteLogoUrl: string;
+  siteName: string;
 }
 
 // ==========================================
