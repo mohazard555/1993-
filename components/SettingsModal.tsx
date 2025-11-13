@@ -267,11 +267,15 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppDa
       setSyncStatus({ type: 'error', message: publicGistUrl ? 'يرجى إدخال رمز GitHub.' : 'لم يتم تكوين رابط Gist في التطبيق.' });
       return;
     }
-    setSyncStatus({ type: 'loading', message: action === 'save' ? 'جارٍ الحفظ...' : 'جارٍ التحميل...' });
+    setSyncStatus({ type: 'loading', message: action === 'save' ? 'جارٍ الحفظ والمزامنة...' : 'جارٍ التحميل...' });
     try {
       if (action === 'save') {
+        // Save the current local data to the Gist first.
         await saveToGist(publicGistUrl, token, appData);
-        setSyncStatus({ type: 'success', message: 'تم الحفظ بنجاح!' });
+        // Then, immediately load it back to confirm and sync the state.
+        const data = await loadFromGist(publicGistUrl, token);
+        setAppData(data);
+        setSyncStatus({ type: 'success', message: 'تم الحفظ والمزامنة بنجاح!' });
       } else {
         const data = await loadFromGist(publicGistUrl, token);
         setAppData(data);
