@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clipboard, Check, Save, Share2, Trash2, Volume2, VolumeX } from 'lucide-react';
 import TextAnalysis from './TextAnalysis';
@@ -146,12 +147,12 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ text, onSave, onClear }) 
              <div ref={shareMenuRef} className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-xl z-10 p-2 space-y-1">
                 <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><WhatsAppIcon/> واتساب</a>
                 <a href={`https://www.facebook.com/sharer/sharer.php?u=none&quote=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><FacebookIcon/> فيسبوك</a>
-                <a href={`httpshttps://t.me/share/url?url=none&text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><TelegramIcon/> تيليجرام</a>
+                <a href={`https://t.me/share/url?url=none&text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"><TelegramIcon/> تيليجرام</a>
             </div>
           )}
         </div>
       </div>
-      <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 text-lg leading-relaxed bg-white/30 dark:bg-black/20 p-4 rounded-lg">
+      <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 text-lg leading-relaxed bg-white/30 dark:bg-black/20 p-4 rounded-lg max-h-96 overflow-y-auto">
         {text}
       </div>
       <TextAnalysis text={text} />

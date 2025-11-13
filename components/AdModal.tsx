@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 
 interface AdModalProps {
@@ -134,6 +135,8 @@ const AdModal: React.FC<AdModalProps> = ({ isOpen, adUrl, onAdFinished, duration
 
       playerRef.current = new window.YT.Player(PLAYER_ID, {
         videoId: videoId,
+        height: '100%',
+        width: '100%',
         playerVars: {
           autoplay: 1,
           mute: 1,
