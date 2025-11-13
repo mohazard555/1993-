@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { AppConfig, AppData, CustomAd, SavedResult } from '../types';
-import { saveToGist, loadFromGist } from '../services/geminiService';
-import { X, FileUp, FileDown, CloudUpload, CloudDownload, Github, Settings, Database, Save, Edit, Trash2, Image as ImageIcon, Link as LinkIcon, Menu, BookOpen, PlusCircle } from 'lucide-react';
+import { saveToGist, loadFromGist, generateText } from '../services/geminiService';
+import { X, FileUp, FileDown, CloudUpload, CloudDownload, Github, Settings, Database, Save, Edit, Trash2, Image as ImageIcon, Link as LinkIcon, Menu, BookOpen, PlusCircle, Wifi } from 'lucide-react';
 import Spinner from './Spinner';
 
 // Utility function to read file as Base64
@@ -239,11 +239,24 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
   const [token, setToken] = useState(localStorage.getItem('githubToken') || '');
   const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [testStatus, setTestStatus] = useState<{ state: 'idle' | 'loading' | 'success' | 'error', message: string }>({ state: 'idle', message: ''});
+
 
   useEffect(() => {
     localStorage.setItem('gistUrl', gistUrl);
     localStorage.setItem('githubToken', token);
   }, [gistUrl, token]);
+  
+  const handleApiTest = async () => {
+    setTestStatus({ state: 'loading', message: 'جاري الاختبار...' });
+    try {
+        await generateText("مرحبا"); // Simple prompt to test connectivity
+        setTestStatus({ state: 'success', message: 'نجاح الاتصال! الخدمة تعمل بشكل جيد.' });
+    } catch (error) {
+        const errorMessage = (error instanceof Error) ? error.message : String(error);
+        setTestStatus({ state: 'error', message: `فشل الاتصال: ${errorMessage}` });
+    }
+  };
 
   const handleSync = async (action: 'save' | 'load') => {
     if (!gistUrl || !token) {
@@ -322,6 +335,19 @@ const DataManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispatch
           </div>
         )}
       </div>
+
+      <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-black/10 dark:border-white/10 mb-6">
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Wifi /> تشخيص الاتصال</h3>
+        <button onClick={handleApiTest} disabled={testStatus.state === 'loading'} className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-full transition disabled:bg-purple-800">
+           {testStatus.state === 'loading' ? <Spinner /> : 'اختبار اتصال API'}
+        </button>
+        {testStatus.state !== 'idle' && (
+            <div className={`mt-4 text-center p-3 rounded-lg text-sm ${testStatus.state === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                <p className="font-bold">{testStatus.message}</p>
+            </div>
+        )}
+      </div>
+
       <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-black/10 dark:border-white/10">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">النسخ الاحتياطي المحلي</h3>
         <div className="flex flex-col md:flex-row gap-4">
