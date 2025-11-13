@@ -45,7 +45,11 @@ export const loadFromGist = async (rawUrl: string, token: string): Promise<any> 
     if (!rawUrl || !token) {
         throw new Error('Gist URL and Token are required.');
     }
-    const response = await fetch(rawUrl, {
+    
+    // Add a cache-busting query parameter to ensure the latest version is fetched.
+    const cacheBustedUrl = `${rawUrl.split('?')[0]}?_=${new Date().getTime()}`;
+
+    const response = await fetch(cacheBustedUrl, {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github.v3.raw',

@@ -324,8 +324,11 @@ const App: React.FC = () => {
       }
 
       try {
-        // Fetch the latest data from the public Gist. 'no-store' ensures freshness.
-        const response = await fetch(PUBLIC_GIST_RAW_URL, { cache: 'no-store' });
+        // Fetch the latest data from the public Gist. 'no-store' is a good practice,
+        // and appending a timestamp query param ("cache-busting") ensures that
+        // we bypass any intermediate caches (like CDNs) and get the absolute latest data.
+        const cacheBustedUrl = `${PUBLIC_GIST_RAW_URL.split('?')[0]}?_=${new Date().getTime()}`;
+        const response = await fetch(cacheBustedUrl, { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Gist fetch failed with status: ${response.status}`);
         }
