@@ -235,12 +235,14 @@ const ContentManagementTab: React.FC<{ appData: AppData, setAppData: React.Dispa
 // Data Sync & Backup Tab
 // ==========================================
 interface DataManagementTabProps {
+  config: AppConfig;
+  setConfig: (c: AppConfig) => void;
   appData: AppData;
   setAppData: React.Dispatch<React.SetStateAction<AppData>>;
   publicGistUrl: string;
 }
 
-const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppData, publicGistUrl }) => {
+const DataManagementTab: React.FC<DataManagementTabProps> = ({ config, setConfig, appData, setAppData, publicGistUrl }) => {
   const [token, setToken] = useState(localStorage.getItem('githubToken') || '');
   const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -270,16 +272,27 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppDa
     setSyncStatus({ type: 'loading', message: action === 'save' ? 'جارٍ الحفظ والمزامنة...' : 'جارٍ التحميل...' });
     try {
       if (action === 'save') {
-        // Save the current local data to the Gist first.
-        await saveToGist(publicGistUrl, token, appData);
-        // Then, immediately load it back to confirm and sync the state.
-        const data = await loadFromGist(publicGistUrl, token);
-        setAppData(data);
-        setSyncStatus({ type: 'success', message: 'تم الحفظ والمزامنة بنجاح!' });
+        const payload = { config, data: appData };
+        await saveToGist(publicGistUrl, token, payload);
+        const loadedData = await loadFromGist(publicGistUrl, token);
+
+        if (loadedData && loadedData.config && loadedData.data) {
+            setConfig(loadedData.config);
+            setAppData(loadedData.data);
+            setSyncStatus({ type: 'success', message: 'تم الحفظ والمزامنة بنجاح!' });
+        } else {
+            throw new Error('فشل التحقق من البيانات بعد الحفظ. البيانات المحملة غير صالحة.');
+        }
+
       } else {
-        const data = await loadFromGist(publicGistUrl, token);
-        setAppData(data);
-        setSyncStatus({ type: 'success', message: 'تم التحميل بنجاح!' });
+        const loadedData = await loadFromGist(publicGistUrl, token);
+         if (loadedData && loadedData.config && loadedData.data) {
+            setConfig(loadedData.config);
+            setAppData(loadedData.data);
+            setSyncStatus({ type: 'success', message: 'تم التحميل بنجاح!' });
+        } else {
+             throw new Error('فشل تحميل البيانات. هيكل البيانات في Gist غير صالح.');
+        }
       }
     } catch (error) {
       console.error(error);
@@ -290,11 +303,11 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppDa
   };
 
   const handleExport = () => {
-    const dataStr = JSON.stringify(appData, null, 2);
+    const dataStr = JSON.stringify({ config, data: appData }, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
-    link.download = 'ai-text-app-data.json';
+    link.download = 'ai-text-app-backup.json';
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
@@ -310,7 +323,12 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppDa
       try {
         const text = e.target?.result;
         const importedData = JSON.parse(text as string);
-        setAppData(importedData);
+        if (importedData && importedData.config && importedData.data) {
+            setConfig(importedData.config);
+            setAppData(importedData.data);
+        } else {
+            alert('ملف JSON غير صالح أو لا يحتوي على الهيكل المطلوب (config, data).');
+        }
       } catch (error) {
         alert('ملف JSON غير صالح.');
       }
@@ -322,7 +340,7 @@ const DataManagementTab: React.FC<DataManagementTabProps> = ({ appData, setAppDa
     <>
       <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-black/10 dark:border-white/10 mb-6">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2"><Github /> المزامنة عبر Gist</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">احفظ بياناتك (الإعلانات، ...) على GitHub Gist لمشاركتها مع جميع المستخدمين.</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">احفظ إعداداتك وبياناتك على GitHub Gist لمشاركتها مع جميع المستخدمين.</p>
         
         {publicGistUrl ? (
             <div className="mb-4 p-3 bg-black/5 dark:bg-white/10 rounded-lg text-sm text-center text-gray-600 dark:text-gray-300">
@@ -447,7 +465,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, appData,
         <div className="p-6 overflow-y-auto">
             {activeTab === 'config' && <AppConfigTab config={config} setConfig={setConfig} />}
             {activeTab === 'content' && <ContentManagementTab appData={appData} setAppData={setAppData} />}
-            {activeTab === 'data' && <DataManagementTab appData={appData} setAppData={setAppData} publicGistUrl={publicGistUrl} />}
+            {activeTab === 'data' && <DataManagementTab config={config} setConfig={setConfig} appData={appData} setAppData={setAppData} publicGistUrl={publicGistUrl} />}
         </div>
       </div>
     </div>

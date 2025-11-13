@@ -318,33 +318,41 @@ const App: React.FC = () => {
   // Effect to fetch public data from Gist on startup
   useEffect(() => {
     const fetchAndMergePublicData = async () => {
-      // Only run if the URL has been configured by the developer.
       if (!PUBLIC_GIST_RAW_URL || PUBLIC_GIST_RAW_URL.trim() === '') {
           console.info("Public Gist URL is not configured. App will use local data only.");
           return;
       }
 
       try {
-        // Fetch the latest data from the public Gist. 'no-store' is a good practice,
-        // and appending a timestamp query param ("cache-busting") ensures that
-        // we bypass any intermediate caches (like CDNs) and get the absolute latest data.
         const cacheBustedUrl = `${PUBLIC_GIST_RAW_URL.split('?')[0]}?_=${new Date().getTime()}`;
         const response = await fetch(cacheBustedUrl, { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Gist fetch failed with status: ${response.status}`);
         }
         const gistData = await response.json();
+        
+        // Check for the new, comprehensive data structure { config, data }
+        if (gistData && gistData.config && gistData.data) {
+            // Gist is the source of truth for all public configuration.
+            setAppConfig(gistData.config);
 
-        // The Gist is the single source of truth for shared/public data.
-        // We merge it carefully to avoid overwriting user-specific local data.
-        setAppData(currentLocalData => ({
-          ...currentLocalData, // Retains user's local 'results' and 'savedResults'.
-          customAds: gistData.customAds || [], // Overwrites ads with the version from the Gist.
-        }));
+            // Gist is also the source for shared content like custom ads.
+            // We merge carefully to avoid overwriting user's local data like saved results.
+            setAppData(currentLocalData => ({
+              ...currentLocalData, // Retains user's local 'results' and 'savedResults'.
+              customAds: gistData.data.customAds || [], // Overwrites ads with the version from the Gist.
+            }));
+        } else {
+            // Fallback for the old format (only AppData) for backward compatibility.
+            console.warn("Gist data is in a legacy format or is invalid. Only loading ads.");
+            setAppData(currentLocalData => ({
+              ...currentLocalData,
+              customAds: gistData.customAds || [],
+            }));
+        }
 
       } catch (error) {
         console.error('Failed to load or process public data from Gist. The app will continue with local data.', error);
-        // Optional: show a toast/notification to the user about the failure.
       }
     };
 
