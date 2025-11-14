@@ -420,42 +420,22 @@ const App: React.FC = () => {
       setGenerationRequest(null); // Clear request only on SUCCESS
     } catch (error) {
       console.error("Failed to fetch AI result:", error);
-      let errorMessage = 'عذراً، حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.';
+      let userFriendlyMessage = 'عذراً، حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى لاحقاً.';
+      
       if (error instanceof Error) {
-        // Attempt to parse a more specific error message from the API response
-        try {
-            // Check for our custom "not found" error first
-            if (error.message.includes("AI API Key not found")) {
-                errorMessage = 'خطأ في الإعدادات: مفتاح API للذكاء الاصطناعي غير موجود. يرجى مراجعة المسؤول.';
-                return; // Early return
-            }
-
-            // Look for a JSON string within the error message
-            const jsonMatch = error.message.match(/\{.*\}/s);
-            if (jsonMatch) {
-                const errorObj = JSON.parse(jsonMatch[0]);
-                const apiError = errorObj.error || errorObj;
-                const code = apiError.code || 'N/A';
-                let msg = apiError.message || 'No specific message.';
-
-                // Make specific error messages more user-friendly
-                if (msg.includes("API key not valid")) {
-                  msg = "مفتاح API المستخدم غير صالح. يرجى التحقق منه في الإعدادات.";
-                } else if (code === 503 || msg.toLowerCase().includes('overloaded')) {
-                  msg = "النموذج مشغول حاليًا بسبب الضغط العالي. يرجى المحاولة مرة أخرى بعد قليل.";
-                }
-
-                errorMessage = `فشل الاتصال بالخدمة (خطأ ${code}): ${msg}`;
-            } else if (error.message.includes('API Key') || error.message.includes('entity was not found')) {
-                 errorMessage = 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً. قد يكون مفتاح API غير صالح أو أن الخدمة محظورة.';
-            } else {
-                 errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
-            }
-        } catch (parseError) {
-             errorMessage = `عذراً، حدث خطأ غير متوقع: ${error.message}`;
+        const msg = error.message.toLowerCase();
+        if (msg.includes("ai api key not found")) {
+          userFriendlyMessage = 'خطأ في الإعدادات: مفتاح API للذكاء الاصطناعي غير موجود. يرجى مراجعة المسؤول.';
+        } else if (msg.includes("api key not valid")) {
+          userFriendlyMessage = "مفتاح API المستخدم غير صالح. يرجى التحقق منه في الإعدادات أو الاتصال بالمسؤول.";
+        } else if (msg.includes('503') || msg.includes('overloaded') || msg.includes('busy')) {
+          userFriendlyMessage = "الخدمة مشغولة حاليًا بعد عدة محاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.";
+        } else if (msg.includes('multiple retries')) {
+            userFriendlyMessage = "فشل الاتصال بالخدمة بعد عدة محاولات. قد يكون هناك ضغط على الشبكة. يرجى المحاولة مرة أخرى بعد قليل.";
         }
       }
-      setAppData(prev => ({...prev, results: { ...prev.results, [service]: errorMessage }}));
+
+      setAppData(prev => ({ ...prev, results: { ...prev.results, [service]: userFriendlyMessage } }));
     } finally {
       setGeneratingService(null);
     }

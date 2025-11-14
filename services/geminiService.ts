@@ -1,29 +1,52 @@
 import { GoogleGenAI } from "@google/genai";
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 export const generateText = async (prompt: string): Promise<string> => {
-  try {
-    // Check for GEMINI_API_KEY first, then fall back to API_KEY to support different environments.
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
-    if (!apiKey) {
-      // Throw a specific, clear error if neither key is configured.
-      // The UI will catch this and display a user-friendly message.
-      throw new Error("AI API Key not found. Please configure GEMINI_API_KEY or API_KEY.");
-    }
-
-    const ai = new GoogleGenAI({ apiKey: apiKey });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-    return response.text;
-  } catch (error) {
-    console.error("Error generating text with Gemini:", error);
-    // Re-throw the error so the UI layer can handle it.
-    throw error;
+  if (!apiKey) {
+    throw new Error("AI API Key not found. Please configure GEMINI_API_KEY or API_KEY.");
   }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const maxRetries = 3;
+  let currentDelay = 2000; // Start with 2 seconds
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+      return response.text;
+    } catch (error) {
+      console.error(`Error generating text (Attempt ${attempt}/${maxRetries}):`, error);
+      const errorMessage = (error instanceof Error) ? error.message.toLowerCase() : String(error).toLowerCase();
+      
+      // Check for specific retry-able errors (503, overloaded, resource exhausted)
+      const isRetryable = errorMessage.includes('503') || 
+                          errorMessage.includes('overloaded') || 
+                          errorMessage.includes('busy') ||
+                          errorMessage.includes('resource has been exhausted');
+
+      if (isRetryable && attempt < maxRetries) {
+        console.log(`Model is busy or overloaded. Retrying in ${currentDelay / 1000}s...`);
+        await delay(currentDelay);
+        currentDelay *= 2; // Exponential backoff: 2s, 4s
+      } else {
+        // If it's not a retry-able error or we've run out of retries, re-throw it.
+        throw error;
+      }
+    }
+  }
+  
+  // This line is technically unreachable if the loop always throws on the last attempt,
+  // but it's required for TypeScript to be happy about the return type.
+  throw new Error("Failed to generate text after multiple retries.");
 };
+
 
 // Gist Synchronization Service
 const GIST_ID_REGEX = /([a-f0-9]{32})/;
